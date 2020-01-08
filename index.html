@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<title></title>
+</head>
+<body>
+	<div id="viewport"></div>
+</body>
+<script src="https://threejs.org/build/three.js"></script>
+<script type="text/javascript" src="physi.js"></script>
+<script src='js/projector.js'></script>
+<script src='js/threex.domevent.js'></script>
+<script>
+	'use strict';
+	
+	Physijs.scripts.worker = 'physijs_worker.js';
+	Physijs.scripts.ammo = '/js/ammo.js';
+
+	let initScene, render, renderer, scene, camera, ball, ball2, ball3, ball4, heart, walls, cameraControls, domEvent;
+	const loader = new THREE.TextureLoader();
+
+	
+	initScene = function() {
+		renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		document.getElementById( 'viewport' ).appendChild( renderer.domElement );
+		//enable shadows
+  		renderer.shadowMap.enabled = true;
+  		renderer.shadowMapSoft = true;
+		renderer.shadowMap.type = THREE.BasicShadowMap;
+		
+		scene = new Physijs.Scene;
+		scene.background = new THREE.Color( 0x00008b );
+		scene.setGravity(new THREE.Vector3( 0, -30, 0 ));
+		scene.addEventListener("update", function(){
+        	scene.simulate(undefined, 2);
+    	});
+		
+		camera = new THREE.PerspectiveCamera(
+			35,
+			window.innerWidth / window.innerHeight,
+			1,
+			1000
+		);
+		camera.position.set( 0, 50, 220 );
+		scene.add( camera );
+
+		THREE.Object3D._threexDomEvent.camera(camera);
+ 		domEvent = new THREEx.DomEvent(camera);
+
+		ground();
+		tree();
+		basket();
+		light();
+
+		let decCollision = function(collided_with, linearVelocity, angularVelocity) {
+			if(collided_with.name == 'tree'){
+					if(!this.isHolded) {
+						this.material.shininess = 150;
+						this.mass = 0;
+					}
+			}
+		}
+
+		ball = decoration('', 0xff0033);
+		ball.castShadow = true;
+		ball.addEventListener( 'collision', decCollision);
+		ball.position.x = 48;
+		scene.add(ball);
+
+		ball2 = decoration('', 0xffff33);
+		ball2.castShadow = true;
+		ball2.addEventListener( 'collision', decCollision);
+		ball2.position.x = 40;
+		scene.add(ball2);
+
+		ball3 = decoration('', 0x780700);
+		ball3.castShadow = true;
+		ball3.addEventListener( 'collision', decCollision);
+		ball3.position.x = 56;
+		scene.add(ball3);
+
+		ball4 = decoration('', 0x780700);
+		ball4.castShadow = true;
+		ball4.addEventListener( 'collision', decCollision);
+		ball4.position.x = 62;
+		scene.add(ball4);
+
+		requestAnimationFrame( render );
+	};
+
+	let ground = () => {
+		// Materials
+		let ground_material = Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({
+				map: loader.load( 'images/snow.jpg'),
+				bumpMap: loader.load( 'images/snow.jpg')
+			}),
+			.8, // high friction
+			.4 // low restitution
+		);
+		ground_material.map.wrapS = ground_material.map.wrapT =
+		ground_material.bumpMap.wrapS = ground_material.bumpMap.wrapT = THREE.RepeatWrapping;
+		ground_material.map.repeat.set( 2.5, 2.5 );
+		ground_material.bumpMap.repeat.set( 2.5, 2.5 );
+		
+		// Ground
+		let ground = new Physijs.BoxMesh(
+			new THREE.BoxGeometry(500, 1, 500),
+			ground_material,
+			0 // mass
+		);
+		ground.receiveShadow = true;
+		ground.position.y = 0.5;
+		scene.add( ground );
+	}
+
+	let tree = () => {
+		let tree = [];
+		let cone1 = new Physijs.CylinderMesh(
+			new THREE.CylinderGeometry(  15, 28, 26, 50 ),
+			Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({ 
+				map: loader.load( 'images/tree.jpg' ),
+				bumpMap: loader.load( 'images/normalmap1.jpg' )
+				}),
+			.8, // high friction
+			.4, // low restitution
+			// 1 //mass
+			),
+			0 // mass
+		);
+		// cone1.material.map.wrapS = cone1.material.map.wrapT = THREE.RepeatWrapping;
+		cone1.material.map.repeat.set( 10, 2.5 );
+		cone1.material.bumpMap.repeat.set( 10, 2.5 );
+		let cone2 = new Physijs.ConeMesh(
+			new THREE.CylinderGeometry(  10, 20, 22, 50 ),
+			Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({ 
+				map: loader.load( 'images/tree.jpg' ),
+				bumpMap: loader.load( 'images/normalmap1.jpg' )
+			}),
+			.8, // high friction
+			.4, // low restitution
+			// 1 //mass
+			),
+			0 // mass
+		);
+		cone2.material.map.repeat.set( 8, 2.5 );
+		cone2.material.bumpMap.repeat.set(8, 2.5);
+		let cone3 = new Physijs.ConeMesh(
+			new THREE.ConeGeometry(  15, 24, 50 ),
+			Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({ 
+				map: loader.load( 'images/tree.jpg' ),
+				bumpMap: loader.load( 'images/normalmap1.jpg' )
+			}),
+			.8, // high friction
+			.4, // low restitution
+			),
+			0 // mass
+		);
+		cone3.material.map.repeat.set( 5, 2.5 );
+		cone3.material.bumpMap.repeat.set(5, 2.5);
+		tree.push(cone1);
+		tree.push(cone2);
+		tree.push(cone3);
+		for(let i = 0; i<tree.length; i++) {
+			tree[i].castShadow = true;
+			tree[i].receiveShadow = true;
+			tree[i].material.map.wrapS = tree[i].material.map.wrapT 
+			= tree[i].material.bumpMap.wrapS = tree[i].material.bumpMap.wrapT = THREE.RepeatWrapping;
+			tree[i].name = 'tree';
+		}
+		//take into account the heights of meshes + the height of the ground
+		cone1.position.y = 13.5;
+		cone2.position.y = 37.5;
+		cone3.position.y = 60.5;
+		//todo: make constraints for different parts of tree
+		scene.add( cone1 );
+		scene.add( cone2 );
+		scene.add( cone3 );
+	}
+
+	let decoration = (tex, c) => {
+		let dec_material = Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({
+				map: tex? loader.load( tex ) : '',
+				color: c,
+				emissive: 'yellow',
+				emissiveIntensity: 0.5
+			}),
+			.8, // high friction
+			.1, // low restitution
+			1 //mass
+			)
+		let dec = new Physijs.SphereMesh(
+			new THREE.SphereGeometry(5, 20, 20),
+			dec_material
+			);
+		dec.position.y = 8;
+
+		// let isHolded = dec.isHolded; //boolean flag to check if an object is clicked and holded
+		let vec = new THREE.Vector3();
+		//todo: make getters and setters for isHolded and mousePos
+		dec.mousePos = new THREE.Vector3();
+ 		domEvent.bind(dec, 'mousedown', function(e){
+ 			dec.isHolded = true;
+ 			dec.position.z = 0;
+ 			dec.__dirtyPosition = true;
+ 		});
+ 		document.addEventListener('mousemove', function(e) {
+ 			if (dec.isHolded) {
+				vec.set(
+    				( event.clientX / window.innerWidth ) * 2 - 1,
+    				- ( event.clientY / window.innerHeight ) * 2 + 1,
+    				0.5 );
+
+				vec.unproject( camera );
+
+				vec.sub( camera.position ).normalize();
+
+				var distance = - camera.position.z / vec.z;
+
+				dec.mousePos.copy( camera.position ).add( vec.multiplyScalar( distance ) );
+ 			}
+ 		})
+ 		domEvent.bind(dec, 'mouseup', function(object3d){ 
+ 			dec.isHolded = false;
+ 			dec.setLinearVelocity(new THREE.Vector3(0, 0, 0));
+    		dec.setAngularVelocity(new THREE.Vector3(0, 0, 0));
+ 		});
+		return dec;
+	}
+
+	let basket = () => {
+		walls = [];
+		for(let i = 0; i<4; i++) {
+			let wall = new Physijs.BoxMesh(
+			new THREE.BoxGeometry(30, 18, 1),
+			Physijs.createMaterial(
+			new THREE.MeshPhongMaterial({
+				map: loader.load( 'images/basket.jpg'),
+				bumpMap: loader.load( 'images/basket.jpg'),
+				color: 'yellow'
+			}),
+			.8, // high friction
+			.4 // low restitution
+			),
+			0 //mass
+			);
+			wall.castShadow = true;
+			wall.receiveShadow = true;
+			wall.position.x = 50;
+			wall.position.y = 9;
+			walls.push(wall);
+		}
+		walls[0].position.z = -10;
+		walls[1].position.x = 65;
+		walls[1].position.z = 5;
+		walls[1].rotation.set(0, Math.PI/2, 0);
+		walls[2].position.x = 35;
+		walls[2].position.z = 5;
+		walls[2].rotation.set(0, Math.PI/2, 0);
+		walls[3].position.z = 20;
+		walls[3].geometry = new THREE.BoxGeometry(30, 10, 1);
+		for(let i = 0; i<walls.length; i++) {
+			scene.add(walls[i]);
+		}
+	}
+
+	let light = () => {
+		var intensity = 0.9;
+		var pointLight = new THREE.PointLight( 'white', intensity, 0 );
+		pointLight.castShadow = true;
+		pointLight.shadow.bias = - 0.005; // reduces self-shadowing on double-sided objects
+		//make shadows smoother
+		pointLight.shadow.mapSize.width = 1024;
+		pointLight.shadow.mapSize.height = 1024;
+		scene.add(pointLight);
+		pointLight.position.set(60, 100, 200);
+		var light = new THREE.AmbientLight( 0xCBF9F6, 0.1 );
+		scene.add( light );
+	}
+	
+	render = function() {
+		scene.simulate(); // run physics
+		renderer.render( scene, camera); // render the scene
+		if(ball.isHolded) {
+ 			ball.position.x = ball.mousePos.x;
+ 			ball.position.y = ball.mousePos.y;
+ 			ball.__dirtyPosition = true;
+		}
+		if(ball2.isHolded) {
+ 			ball2.position.x = ball2.mousePos.x;
+ 			ball2.position.y = ball2.mousePos.y;
+ 			ball2.__dirtyPosition = true;
+		}
+		if(ball3.isHolded) {
+ 			ball3.position.x = ball2.mousePos.x;
+ 			ball3.position.y = ball2.mousePos.y;
+ 			ball3.__dirtyPosition = true;
+		}
+		if(ball4.isHolded) {
+ 			ball4.position.x = ball2.mousePos.x;
+ 			ball4.position.y = ball2.mousePos.y;
+ 			ball4.__dirtyPosition = true;
+		}
+		requestAnimationFrame( render );
+	};
+	
+	window.onload = initScene();
+
+
+
+
+</script>
+</html>
